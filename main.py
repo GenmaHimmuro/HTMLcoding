@@ -1,5 +1,7 @@
 import datetime
 from collections import defaultdict
+from pprint import pprint
+
 import pandas
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -32,10 +34,16 @@ def get_sorted_wine(filename):
     return category_wine
 
 
-def get_min_price_and_low_price_offer(filename):
+def get_min_price_offer(filename):
     excel_file = pandas.read_excel(io=filename, sheet_name="Лист1", na_values=['N/A', 'NA'], keep_default_na=False)
-    min_price_wines = excel_file.loc[excel_file.groupby('Категория')['Цена'].idxmin()].to_dict(orient="records")
+    min_price_wines = excel_file.nsmallest(1,'Цена').to_dict(orient="records")
     return min_price_wines
+
+
+def get_good_offer(filename):
+    excel_file = pandas.read_excel(io=filename, sheet_name="Лист1", na_values=['N/A', 'NA'], keep_default_na=False)
+    good_offer_wine = excel_file[excel_file['Акция'].isin(['Выгодное предложение'])].to_dict(orient="records")
+    return good_offer_wine
 
 
 def start_server():
@@ -44,12 +52,12 @@ def start_server():
 
 
 def main():
-    filename = 'wine3.xlsx'
+    filename = 'wine.xlsx'
     env = Environment(loader=FileSystemLoader('.'), autoescape=select_autoescape(['html', 'xml']))
     template = env.get_template('template.html')
     rendered_page = template.render(years_old=get_date(), wines=get_sorted_wine(filename),
-                                    min_price=get_min_price_and_low_price_offer(filename))
-
+                                    min_price = get_min_price_offer(filename), good_offer = get_good_offer(filename))
+    pprint(get_min_price_offer(filename))
     with open('index.html', 'w', encoding="utf8") as file:
         file.write(rendered_page)
 
